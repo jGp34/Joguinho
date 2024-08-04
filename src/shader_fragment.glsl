@@ -17,6 +17,7 @@ uniform mat4 projection;
 #define BUNNY  1
 #define PLANE  2
 #define SPHERE 3
+#define PROJECTILE 4
 uniform int object_id;
 
 // O valor de saída ("out") de um Fragment Shader é a cor final do fragmento.
@@ -60,6 +61,15 @@ void main()
         // PREENCHA AQUI
         // Propriedades espectrais da esfera
         Kd = vec3(0.8,0.4,0.08);
+        Ks = vec3(0.0,0.0,0.0);
+        Ka = vec3(0.4,0.2,0.04);
+        q = 1.0;
+    }
+    else if ( object_id == PROJECTILE )
+    {
+        // PREENCHA AQUI
+        // Propriedades espectrais do projétil
+        Kd = vec3(0.9,0.2,0.08);
         Ks = vec3(0.0,0.0,0.0);
         Ka = vec3(0.4,0.2,0.04);
         q = 1.0;

@@ -114,6 +114,9 @@ struct Projectile {
     glm::vec4 velocity;
     float speed;
     float damage;
+
+    Projectile(glm::vec4 position, glm::vec4 velocity, float speed, float damage)
+        : position(position), velocity(velocity), speed(speed), damage(damage) {}
 };
 
 // estrutura para representar um inimigo
@@ -129,10 +132,15 @@ struct Enemy {
 
 // teclas pressionadas pelo player
 bool tecla_a_pressionada = false;
+bool tecla_s_pressionada = false;
 bool tecla_d_pressionada = false;
 bool tecla_n_pressionada = false;
 bool tecla_m_pressionada = false;
-bool tecla_s_pressionada = false;
+bool tecla_e_pressionada = false;
+
+bool tecla_espaco_pressionada = false;
+bool tecla_shift_pressionada = false;
+bool tecla_w_pressionada = false;
 
 // Declaração de funções utilizadas para pilha de matrizes de modelagem.
 void PushMatrix(glm::mat4 M);
@@ -339,6 +347,7 @@ int main(int argc, char* argv[])
     // para renderização. Veja slides 180-200 do documento Aula_03_Rendering_Pipeline_Grafico.pdf.
     //
     LoadShadersFromFiles();
+    
 
     // Construímos a representação de objetos geométricos através de malhas de triângulos
     ObjModel dragonmodel("../../data/dragon.obj");
@@ -376,6 +385,10 @@ int main(int argc, char* argv[])
 
     float position = -10.0f;
     int look_at = 1;
+
+    float t_now;
+    float t_last;
+    float d_time;
     // Ficamos em um loop infinito, renderizando, até que o usuário feche a janela
     while (!glfwWindowShouldClose(window))
     {
@@ -416,12 +429,12 @@ int main(int argc, char* argv[])
             //glm::mat4 view = Matrix_Camera_View(camera_position_c, camera_view_vector, camera_up_vector);
         }
         else{
-            std::cout << "position c: " << camera_position_c.x << " " << camera_position_c.y << " " << camera_position_c.z << std::endl;
+            //std::cout << "position c: " << camera_position_c.x << " " << camera_position_c.y << " " << camera_position_c.z << std::endl;
             camera_view_vector = glm::vec4(x,-y,z,0.0f);
             camera_up_vector   = glm::vec4(0.0f,1.0f,0.0f,0.0f); // Vetor "up" fixado para apontar para o "céu" (eito Y global)
             //glm::mat4 view = Matrix_Camera_View(camera_position_c, camera_view_vector, camera_up_vector);
         }
-        std::cout << "view vector: " << camera_view_vector.x << " " << camera_view_vector.y << " " << camera_view_vector.z << std::endl;
+        //std::cout << "view vector: " << camera_view_vector.x << " " << camera_view_vector.y << " " << camera_view_vector.z << std::endl;
 
         // Computamos a matriz "View" utilizando os parâmetros da câmera para
         // definir o sistema de coordenadas da câmera.  Veja slides 2-14, 184-190 e 236-242 do documento Aula_08_Sistemas_de_Coordenadas.pdf.
@@ -433,7 +446,7 @@ int main(int argc, char* argv[])
         // Note que, no sistema de coordenadas da câmera, os planos near e far
         // estão no sentido negativo! Veja slides 176-204 do documento Aula_09_Projecoes.pdf.
         float nearplane = -0.1f;  // Posição do "near plane"
-        float farplane  = -10.0f; // Posição do "far plane"
+        float farplane  = -40.0f; // Posição do "far plane"
 
         if (g_UsePerspectiveProjection)
         {
@@ -469,6 +482,7 @@ int main(int argc, char* argv[])
         #define bunny  1
         #define plane  2
         #define sphere 3
+        #define projectile 4
         
         // Desenhamos o modelo do dragão
         model = Matrix_Translate(1.0f,0.0f,1.5f * (float)tile);
@@ -493,31 +507,86 @@ int main(int argc, char* argv[])
             DrawVirtualObject("the_sphere");
         }
 
-        if (tecla_a_pressionada) {
+        glm::vec4 ortho = crossproduct(camera_view_vector, camera_up_vector);
+
+        if (tecla_a_pressionada && !tecla_shift_pressionada) {
             if (tile != 1){
-                camera_position_c.z += 0.5f;
                 tile = 1;
             }
         }
-        if (tecla_d_pressionada) {
+        if (tecla_a_pressionada && tecla_shift_pressionada && !look_at) {
+            camera_position_c.x -= ortho.x * 0.01f;
+            camera_position_c.z -= ortho.z * 0.01f;
+            camera_position_c.y -= ortho.y * 0.01f;
+        }
+
+
+        if (tecla_d_pressionada && !tecla_shift_pressionada) {
             if (tile != -1){
-                camera_position_c.z -= 0.5f;
                 tile = -1;
             }
         }
-        if (tecla_s_pressionada) {
+        if (tecla_d_pressionada && tecla_shift_pressionada && !look_at) {
+            camera_position_c.x += ortho.x * 0.01f;
+            camera_position_c.z += ortho.z * 0.01f;
+            camera_position_c.y += ortho.y * 0.01f;
+        }
+
+
+        if (tecla_s_pressionada && !tecla_shift_pressionada) {
             if (tile != 0){
-                camera_position_c.z -= 0.0f;
                 tile = 0;
             }
         }
+        if (tecla_s_pressionada && tecla_shift_pressionada && !look_at) {
+            camera_position_c = Matrix_Translate(camera_view_vector.x*-0.01f, 
+                                                camera_view_vector.y*-0.01f, 
+                                                camera_view_vector.z*-0.01f)*camera_position_c;
+        
+        }
+
+        if (tecla_w_pressionada && !tecla_shift_pressionada) {
+            if (tile != 0){
+                tile = 0;
+            }
+        }
+        if (tecla_w_pressionada && tecla_shift_pressionada && !look_at) {
+            camera_position_c = Matrix_Translate(camera_view_vector.x*0.01f, 
+                                                camera_view_vector.y*0.01f, 
+                                                camera_view_vector.z*0.01f)*camera_position_c;
+        
+        }
+
+        if (tecla_espaco_pressionada && tecla_shift_pressionada && !look_at) {
+            camera_position_c.y += 0.01f;
+        }
+
+        // quando o player aperta e, uma esfera é lançada da posição do dragão
+        if (tecla_e_pressionada) {
+            projectiles.push_back(Projectile(
+                glm::vec4(1.0f, -0.8f, 14.0f * (float)tile, 1.0f),
+                glm::vec4(0.04f, 0.0f, 0.0f, 0.0f),
+                3.0f,
+                10.0f
+            ));
+        }
+
+        for (size_t i = 0; i < projectiles.size(); i++) {
+            projectiles[i].position -= projectiles[i].velocity * projectiles[i].speed;
+            
+            model = Matrix_Scale(0.1f, 0.1f, 0.1f) * Matrix_Translate(projectiles[i].position.x, projectiles[i].position.y, projectiles[i].position.z);
+            glUniformMatrix4fv(g_model_uniform, 1 , GL_FALSE , glm::value_ptr(model));
+            glUniform1i(g_object_id_uniform, projectile);
+            DrawVirtualObject("the_sphere");
+        }
+
+
         if (tecla_m_pressionada) {
             look_at = 1;
         }
         if (tecla_n_pressionada) {
             look_at = 0;
         }
-        std::cout << "tile: " << tile << std::endl;
 
         
         TextRendering_ShowFramesPerSecond(window);
@@ -1002,12 +1071,6 @@ void MouseButtonCallback(GLFWwindow* window, int button, int action, int mods)
         // com o botão esquerdo pressionado.
         glfwGetCursorPos(window, &g_LastCursorPosX, &g_LastCursorPosY);
         g_LeftMouseButtonPressed = true;
-
-        // Criando um novo projétil
-        Projectile new_projectile;
-        new_projectile.position = glm::vec4(0.0f, 0.0f, 0.0f, 1.0f);
-        new_projectile.velocity = glm::vec4(1.0f, 1.0f, 0.0f, 0.0f);
-        projectiles.push_back(new_projectile);
     
     }
     if (button == GLFW_MOUSE_BUTTON_LEFT && action == GLFW_RELEASE)
@@ -1251,6 +1314,37 @@ void KeyCallback(GLFWwindow* window, int key, int scancode, int action, int mod)
         else if (action == GLFW_RELEASE)
             tecla_m_pressionada = false;
     }
+
+    if (key == GLFW_KEY_W) {
+        if (action == GLFW_PRESS)
+            tecla_w_pressionada = true;
+        
+        else if (action == GLFW_RELEASE)
+            tecla_w_pressionada = false;
+    }
+
+    if (key == GLFW_KEY_SPACE) {
+        if (action == GLFW_PRESS)
+            tecla_espaco_pressionada = true;
+        
+        else if (action == GLFW_RELEASE)
+            tecla_espaco_pressionada = false;
+    }
+
+    if (key == GLFW_KEY_LEFT_SHIFT) {
+        if (action == GLFW_PRESS)
+            tecla_shift_pressionada = true;
+        
+        else if (action == GLFW_RELEASE)
+            tecla_shift_pressionada = false;
+    }
+
+    if (key == GLFW_KEY_E){
+        if (action == GLFW_PRESS)
+            tecla_e_pressionada = true;
+        
+        else if (action == GLFW_RELEASE)
+            tecla_e_pressionada = false;}
 }
 
 // Definimos o callback para impressão de erros da GLFW no terminal
