@@ -22,5 +22,11 @@
   "command": "C:\\msys64\\ucrt64\\bin\\gcc.exe  @CMakeFiles/main.dir/includes_C.rsp -g -o CMakeFiles\\main.dir\\src\\glad.c.obj -c C:\\Users\\djonga\\Programas\\Trabalho\\src\\glad.c",
   "file": "C:/Users/djonga/Programas/Trabalho/src/glad.c",
   "output": "CMakeFiles/main.dir/src/glad.c.obj"
+},
+{
+  "directory": "C:/Users/djonga/Programas/Trabalho/build",
+  "command": "C:\\msys64\\ucrt64\\bin\\g++.exe  @CMakeFiles/main.dir/includes_CXX.rsp -g -std=c++11 -o CMakeFiles\\main.dir\\src\\collisions.cpp.obj -c C:\\Users\\djonga\\Programas\\Trabalho\\src\\collisions.cpp",
+  "file": "C:/Users/djonga/Programas/Trabalho/src/collisions.cpp",
+  "output": "CMakeFiles/main.dir/src/collisions.cpp.obj"
 }
 ]

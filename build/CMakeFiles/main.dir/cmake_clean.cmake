@@ -2,6 +2,8 @@ file(REMOVE_RECURSE
   "C:/Users/djonga/Programas/Trabalho/bin/Debug/main.exe"
   "C:/Users/djonga/Programas/Trabalho/bin/Debug/main.exe.manifest"
   "C:/Users/djonga/Programas/Trabalho/bin/Debug/main.pdb"
+  "CMakeFiles/main.dir/src/collisions.cpp.obj"
+  "CMakeFiles/main.dir/src/collisions.cpp.obj.d"
   "CMakeFiles/main.dir/src/glad.c.obj"
   "CMakeFiles/main.dir/src/glad.c.obj.d"
   "CMakeFiles/main.dir/src/main.cpp.obj"

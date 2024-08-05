@@ -47,6 +47,7 @@
 // Headers locais, definidos na pasta "include/"
 #include "utils.h"
 #include "matrices.h"
+#include "collisions.h"
 
 #define MAX_ENEMIES 12
 
@@ -114,6 +115,7 @@ struct Projectile {
     glm::vec4 velocity;
     float speed;
     float damage;
+    float radius = 0.3f;
 
     Projectile(glm::vec4 position, glm::vec4 velocity, float speed, float damage)
         : position(position), velocity(velocity), speed(speed), damage(damage) {}
@@ -125,6 +127,7 @@ struct Enemy {
     glm::vec4 velocity;
     float speed;
     float damage;
+    float radius = 2.0f;
 
     Enemy(glm::vec4 position, glm::vec4 velocity, float speed, float damage)
         : position(position), velocity(velocity), speed(speed), damage(damage) {} 
@@ -186,6 +189,7 @@ void ScrollCallback(GLFWwindow* window, double xoffset, double yoffset);
 
 // Definimos uma estrutura que armazenará dados necessários para renderizar
 // cada objeto da cena virtual.
+/*
 struct SceneObject
 {
     std::string  name;        // Nome do objeto
@@ -193,7 +197,10 @@ struct SceneObject
     size_t       num_indices; // Número de índices do objeto dentro do vetor indices[] definido em BuildTrianglesAndAddToVirtualScene()
     GLenum       rendering_mode; // Modo de rasterização (GL_TRIANGLES, GL_TRIANGLE_STRIP, etc.)
     GLuint       vertex_array_object_id; // ID do VAO onde estão armazenados os atributos do modelo
+    glm::vec3    bbox_min;    // Axis-Aligned Bounding Box do objeto
+    glm::vec3    bbox_max;
 };
+*/
 
 // Abaixo definimos variáveis globais utilizadas em várias funções do código.
 
@@ -387,7 +394,7 @@ int main(int argc, char* argv[])
     int look_at = 1;
 
     float t_now;
-    float t_last;
+    float t_last = glfwGetTime();
     float d_time;
     // Ficamos em um loop infinito, renderizando, até que o usuário feche a janela
     while (!glfwWindowShouldClose(window))
@@ -430,7 +437,7 @@ int main(int argc, char* argv[])
         }
         else{
             //std::cout << "position c: " << camera_position_c.x << " " << camera_position_c.y << " " << camera_position_c.z << std::endl;
-            camera_view_vector = glm::vec4(x,-y,z,0.0f);
+            camera_view_vector = glm::vec4(-x,-y,-z,0.0f);
             camera_up_vector   = glm::vec4(0.0f,1.0f,0.0f,0.0f); // Vetor "up" fixado para apontar para o "céu" (eito Y global)
             //glm::mat4 view = Matrix_Camera_View(camera_position_c, camera_view_vector, camera_up_vector);
         }
@@ -461,8 +468,8 @@ int main(int argc, char* argv[])
         glUniformMatrix4fv(g_view_uniform       , 1 , GL_FALSE , glm::value_ptr(view));
         glUniformMatrix4fv(g_projection_uniform , 1 , GL_FALSE , glm::value_ptr(projection));
 
-        double current_time = glfwGetTime();
-        double delta_time = current_time - last_time;
+        float current_time = glfwGetTime();
+        float delta_time = current_time - last_time;
 
         if (delta_time >= spawn_interval) {
             int random_z = dis(gen);
@@ -470,7 +477,7 @@ int main(int argc, char* argv[])
             
             enemies.push_back(Enemy(
                 glm::vec4(-30.0f, -0.5f, - 5.0f*random_z, 1.0f),
-                glm::vec4(0.04f, 0.0f, 0.0f, 0.0f),
+                glm::vec4(3.0f, 0.0f, 0.0f, 0.0f),
                 (float)random_s * 3.0f,
                 20.0f
             ));
@@ -483,12 +490,15 @@ int main(int argc, char* argv[])
         #define plane  2
         #define sphere 3
         #define projectile 4
-        
+ 
         // Desenhamos o modelo do dragão
         model = Matrix_Translate(1.0f,0.0f,1.5f * (float)tile);
         glUniformMatrix4fv(g_model_uniform, 1 , GL_FALSE , glm::value_ptr(model));
         glUniform1i(g_object_id_uniform, dragon);
         DrawVirtualObject("the_dragon");
+
+        // guardadno a posição do dragão
+        glm::vec4 dragon_position = glm::vec4(1.0f, 0.0f, 1.5f * (float)tile, 1.0f);
 
         // Desenhamos o modelo do plano
         model = Matrix_Scale(10.0f, 1.0f, 5.0f) * Matrix_Translate(-0.5f, -1.0f, 0.0f);
@@ -496,11 +506,12 @@ int main(int argc, char* argv[])
         glUniform1i(g_object_id_uniform, plane);
         DrawVirtualObject("the_plane");
 
-        
+        t_now = glfwGetTime();
+        d_time = t_now - t_last;
+
         // Desenhamos o modelo da esfera
         for (size_t i = 0; i < enemies.size() && i < MAX_ENEMIES; i++) {
-            enemies[i].position += enemies[i].velocity * enemies[i].speed;
-            
+            enemies[i].position = enemies[i].position + enemies[i].velocity * enemies[i].speed* d_time;
             model = Matrix_Scale(0.3f, 0.3f, 0.3f) * Matrix_Translate(enemies[i].position.x, enemies[i].position.y, enemies[i].position.z);
             glUniformMatrix4fv(g_model_uniform, 1 , GL_FALSE , glm::value_ptr(model));
             glUniform1i(g_object_id_uniform, sphere);
@@ -515,9 +526,9 @@ int main(int argc, char* argv[])
             }
         }
         if (tecla_a_pressionada && tecla_shift_pressionada && !look_at) {
-            camera_position_c.x -= ortho.x * 0.01f;
-            camera_position_c.z -= ortho.z * 0.01f;
-            camera_position_c.y -= ortho.y * 0.01f;
+            camera_position_c.x -= ortho.x * 1.0f * d_time;
+            camera_position_c.z -= ortho.z * 1.0f * d_time;
+            camera_position_c.y -= ortho.y * 1.0f * d_time;
         }
 
 
@@ -527,9 +538,9 @@ int main(int argc, char* argv[])
             }
         }
         if (tecla_d_pressionada && tecla_shift_pressionada && !look_at) {
-            camera_position_c.x += ortho.x * 0.01f;
-            camera_position_c.z += ortho.z * 0.01f;
-            camera_position_c.y += ortho.y * 0.01f;
+            camera_position_c.x += ortho.x * 1.0f * d_time;
+            camera_position_c.z += ortho.z * 1.0f * d_time;
+            camera_position_c.y += ortho.y * 1.0f * d_time;
         }
 
 
@@ -539,9 +550,9 @@ int main(int argc, char* argv[])
             }
         }
         if (tecla_s_pressionada && tecla_shift_pressionada && !look_at) {
-            camera_position_c = Matrix_Translate(camera_view_vector.x*-0.01f, 
-                                                camera_view_vector.y*-0.01f, 
-                                                camera_view_vector.z*-0.01f)*camera_position_c;
+            camera_position_c = Matrix_Translate(camera_view_vector.x * -1.0f * d_time, 
+                                                 camera_view_vector.y * -1.0f * d_time, 
+                                                 camera_view_vector.z * -1.0f * d_time) * camera_position_c;
         
         }
 
@@ -551,33 +562,49 @@ int main(int argc, char* argv[])
             }
         }
         if (tecla_w_pressionada && tecla_shift_pressionada && !look_at) {
-            camera_position_c = Matrix_Translate(camera_view_vector.x*0.01f, 
-                                                camera_view_vector.y*0.01f, 
-                                                camera_view_vector.z*0.01f)*camera_position_c;
+            camera_position_c = Matrix_Translate(camera_view_vector.x * 1.0f * d_time, 
+                                                 camera_view_vector.y * 1.0f * d_time, 
+                                                 camera_view_vector.z * 1.0f * d_time) * camera_position_c;
         
         }
 
         if (tecla_espaco_pressionada && tecla_shift_pressionada && !look_at) {
-            camera_position_c.y += 0.01f;
+            camera_position_c.y += 1.0f * d_time;
         }
 
         // quando o player aperta e, uma esfera é lançada da posição do dragão
         if (tecla_e_pressionada) {
             projectiles.push_back(Projectile(
                 glm::vec4(1.0f, -0.8f, 14.0f * (float)tile, 1.0f),
-                glm::vec4(0.04f, 0.0f, 0.0f, 0.0f),
+                glm::vec4(3.0f, 0.0f, 0.0f, 0.0f),
                 3.0f,
                 10.0f
             ));
+
+            // limitando o spawn de projéteis
+            if (delta_time < spawn_interval) {
+                tecla_e_pressionada = false;
+            }
         }
 
         for (size_t i = 0; i < projectiles.size(); i++) {
-            projectiles[i].position -= projectiles[i].velocity * projectiles[i].speed;
-            
-            model = Matrix_Scale(0.1f, 0.1f, 0.1f) * Matrix_Translate(projectiles[i].position.x, projectiles[i].position.y, projectiles[i].position.z);
-            glUniformMatrix4fv(g_model_uniform, 1 , GL_FALSE , glm::value_ptr(model));
-            glUniform1i(g_object_id_uniform, projectile);
-            DrawVirtualObject("the_sphere");
+            projectiles[i].position = projectiles[i].position - projectiles[i].velocity * projectiles[i].speed * d_time;
+
+            for (size_t j = 0; j < enemies.size() && j < MAX_ENEMIES; j++) {
+                if (collisionSphereSphere(projectiles[i].radius, enemies[j].radius, projectiles[i].position, enemies[j].position)) {
+                    enemies.erase(enemies.begin() + j);
+                    projectiles.erase(projectiles.begin() + i);
+                    i--; // Ajustar o índice após a remoção
+                    break; // Sair do loop interno para evitar acessar um índice inválido
+                }
+            }
+
+            if (i < projectiles.size()) { // Verificar se o índice ainda é válido
+                model = Matrix_Scale(0.1f, 0.1f, 0.1f) * Matrix_Translate(projectiles[i].position.x, projectiles[i].position.y, projectiles[i].position.z);
+                glUniformMatrix4fv(g_model_uniform, 1, GL_FALSE, glm::value_ptr(model));
+                glUniform1i(g_object_id_uniform, projectile);
+                DrawVirtualObject("the_sphere");
+            }
         }
 
 
@@ -587,6 +614,8 @@ int main(int argc, char* argv[])
         if (tecla_n_pressionada) {
             look_at = 0;
         }
+
+        t_last = t_now;
 
         
         TextRendering_ShowFramesPerSecond(window);

@@ -516,4 +516,5 @@ CMakeFiles/main.dir/src/main.cpp.obj: \
  C:/Users/djonga/Programas/Trabalho/include/glm/gtc/type_ptr.inl \
  C:/Users/djonga/Programas/Trabalho/include/tiny_obj_loader.h \
  C:/Users/djonga/Programas/Trabalho/include/utils.h \
- C:/Users/djonga/Programas/Trabalho/include/matrices.h
+ C:/Users/djonga/Programas/Trabalho/include/matrices.h \
+ C:/Users/djonga/Programas/Trabalho/include/collisions.h
