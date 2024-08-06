@@ -111,14 +111,15 @@ struct ObjModel
 
 
 struct Projectile {
+    float proj_tile;
     glm::vec4 position;
     glm::vec4 velocity;
     float speed;
     float damage;
-    float radius = 0.3f;
+    float radius = 1.0f;
 
     Projectile(glm::vec4 position, glm::vec4 velocity, float speed, float damage)
-        : position(position), velocity(velocity), speed(speed), damage(damage) {}
+        :  position(position), velocity(velocity), speed(speed), damage(damage) {}
 };
 
 // estrutura para representar um inimigo
@@ -127,7 +128,7 @@ struct Enemy {
     glm::vec4 velocity;
     float speed;
     float damage;
-    float radius = 2.0f;
+    float radius = 1.0f;
 
     Enemy(glm::vec4 position, glm::vec4 velocity, float speed, float damage)
         : position(position), velocity(velocity), speed(speed), damage(damage) {} 
@@ -474,9 +475,9 @@ int main(int argc, char* argv[])
         if (delta_time >= spawn_interval) {
             int random_z = dis(gen);
             int random_s = dis2(gen);
-            
+            //MUDAR ISSO AQUI
             enemies.push_back(Enemy(
-                glm::vec4(-30.0f, -0.5f, - 5.0f*random_z, 1.0f),
+                glm::vec4(-30.0f, -0.8f, - 5.0f * random_z, 1.0f),
                 glm::vec4(3.0f, 0.0f, 0.0f, 0.0f),
                 (float)random_s * 3.0f,
                 20.0f
@@ -511,7 +512,17 @@ int main(int argc, char* argv[])
 
         // Desenhamos o modelo da esfera
         for (size_t i = 0; i < enemies.size() && i < MAX_ENEMIES; i++) {
+            // atualizando a posição dos inimigos
             enemies[i].position = enemies[i].position + enemies[i].velocity * enemies[i].speed* d_time;
+
+            // verificando se o inimigo saiu da área do jogo e removendo ele caso sim
+            if (enemies[i].position.x > 10.0f) {
+                enemies.erase(enemies.begin() + i);
+                i--;
+                continue;
+            }
+  
+            // Desenhamos o modelo do inimigo
             model = Matrix_Scale(0.3f, 0.3f, 0.3f) * Matrix_Translate(enemies[i].position.x, enemies[i].position.y, enemies[i].position.z);
             glUniformMatrix4fv(g_model_uniform, 1 , GL_FALSE , glm::value_ptr(model));
             glUniform1i(g_object_id_uniform, sphere);
@@ -575,7 +586,7 @@ int main(int argc, char* argv[])
         // quando o player aperta e, uma esfera é lançada da posição do dragão
         if (tecla_e_pressionada) {
             projectiles.push_back(Projectile(
-                glm::vec4(1.0f, -0.8f, 14.0f * (float)tile, 1.0f),
+                glm::vec4(1.0f, -0.8f, 5.0f * (float)tile, 1.0f),
                 glm::vec4(3.0f, 0.0f, 0.0f, 0.0f),
                 3.0f,
                 10.0f
@@ -590,6 +601,7 @@ int main(int argc, char* argv[])
         for (size_t i = 0; i < projectiles.size(); i++) {
             projectiles[i].position = projectiles[i].position - projectiles[i].velocity * projectiles[i].speed * d_time;
 
+            
             for (size_t j = 0; j < enemies.size() && j < MAX_ENEMIES; j++) {
                 if (collisionSphereSphere(projectiles[i].radius, enemies[j].radius, projectiles[i].position, enemies[j].position)) {
                     enemies.erase(enemies.begin() + j);
@@ -598,9 +610,17 @@ int main(int argc, char* argv[])
                     break; // Sair do loop interno para evitar acessar um índice inválido
                 }
             }
+            
+           // verificando se o projétil saiu da área do jogo e removendo ele caso sim
+           if (projectiles[i].position.x < -45.0f) {
+                projectiles.erase(projectiles.begin() + i);
+                i--;
+                continue;
+            }
 
             if (i < projectiles.size()) { // Verificar se o índice ainda é válido
-                model = Matrix_Scale(0.1f, 0.1f, 0.1f) * Matrix_Translate(projectiles[i].position.x, projectiles[i].position.y, projectiles[i].position.z);
+                // desenhando os projéteis
+                model = Matrix_Scale(0.3f, 0.3f, 0.3f) * Matrix_Translate(projectiles[i].position.x, projectiles[i].position.y, projectiles[i].position.z   /** (projectiles[i].proj_tile + 4.0f  )*/);
                 glUniformMatrix4fv(g_model_uniform, 1, GL_FALSE, glm::value_ptr(model));
                 glUniform1i(g_object_id_uniform, projectile);
                 DrawVirtualObject("the_sphere");
