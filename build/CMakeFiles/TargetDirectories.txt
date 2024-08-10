@@ -1,3 +1,0 @@
-C:/Users/djonga/Programas/Trabalho/build/CMakeFiles/main.dir
-C:/Users/djonga/Programas/Trabalho/build/CMakeFiles/edit_cache.dir
-C:/Users/djonga/Programas/Trabalho/build/CMakeFiles/rebuild_cache.dir

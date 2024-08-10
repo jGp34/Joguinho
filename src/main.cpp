@@ -124,15 +124,28 @@ struct Projectile {
 
 // estrutura para representar um inimigo
 struct Enemy {
+    float enemy_tile;
     glm::vec4 position;
     glm::vec4 velocity;
     float speed;
     float damage;
     float radius = 1.0f;
 
-    Enemy(glm::vec4 position, glm::vec4 velocity, float speed, float damage)
-        : position(position), velocity(velocity), speed(speed), damage(damage) {} 
+    Enemy(float enemy_tile, glm::vec4 position, glm::vec4 velocity, float speed, float damage)
+        : enemy_tile(enemy_tile), position(position), velocity(velocity), speed(speed), damage(damage) {} 
 };
+
+// estrutura para representar o jogador/dragão
+struct Dragon {
+    float health;
+    glm::vec4 position;
+    glm::vec4 velocity;
+    float speed;
+
+    Dragon(float health, glm::vec4 position, glm::vec4 velocity, float speed)
+        : health(health), position(position), velocity(velocity), speed(speed) {}
+};
+
 
 // teclas pressionadas pelo player
 bool tecla_a_pressionada = false;
@@ -217,6 +230,7 @@ std::stack<glm::mat4>  g_MatrixStack;
 
 std::vector<Projectile> projectiles;
 std::vector<Enemy> enemies;
+Dragon player_dragon(100.0f, glm::vec4(0.0f, 0.0f, 0.0f, 1.0f), glm::vec4(0.0f, 0.0f, 0.0f, 0.0f), 5.0f);
 
 // Razão de proporção da janela (largura/altura). Veja função FramebufferSizeCallback().
 float g_ScreenRatio = 1.0f;
@@ -374,6 +388,10 @@ int main(int argc, char* argv[])
     ComputeNormals(&sphereemodel);
     BuildTrianglesAndAddToVirtualScene(&sphereemodel);
 
+    ObjModel cubeemodel("../../data/cube.obj");
+    ComputeNormals(&cubeemodel);
+    BuildTrianglesAndAddToVirtualScene(&cubeemodel);
+
     if ( argc > 1 )
     {
         ObjModel model(argv[1]);
@@ -397,6 +415,10 @@ int main(int argc, char* argv[])
     float t_now;
     float t_last = glfwGetTime();
     float d_time;
+
+    glm::vec3 aabb_min;
+    glm::vec3 aabb_max;
+
     // Ficamos em um loop infinito, renderizando, até que o usuário feche a janela
     while (!glfwWindowShouldClose(window))
     {
@@ -471,12 +493,14 @@ int main(int argc, char* argv[])
 
         float current_time = glfwGetTime();
         float delta_time = current_time - last_time;
-
+        
+        // verificando se é hora de spawnar um novo inimigo
         if (delta_time >= spawn_interval) {
             int random_z = dis(gen);
             int random_s = dis2(gen);
-            //MUDAR ISSO AQUI
+            
             enemies.push_back(Enemy(
+                (-random_z),
                 glm::vec4(-30.0f, -0.8f, - 5.0f * random_z, 1.0f),
                 glm::vec4(3.0f, 0.0f, 0.0f, 0.0f),
                 (float)random_s * 3.0f,
@@ -485,24 +509,46 @@ int main(int argc, char* argv[])
 
             last_time = current_time;
         }
+
          
         #define dragon 0
         #define bunny  1
         #define plane  2
         #define sphere 3
         #define projectile 4
+        #define cube 5
  
         // Desenhamos o modelo do dragão
-        model = Matrix_Translate(1.0f,0.0f,1.5f * (float)tile);
+        model = Matrix_Translate(0.8f, 0.0f, 1.5f * (float)tile);
         glUniformMatrix4fv(g_model_uniform, 1 , GL_FALSE , glm::value_ptr(model));
         glUniform1i(g_object_id_uniform, dragon);
         DrawVirtualObject("the_dragon");
 
+        // Desenhamos o modelo do cubo
+        if (tile == -1){
+            //model = Matrix_Translate(0.0f, -0.5f, 2.0f * (float)tile);
+            aabb_min = glm::vec3(0.0f, -0.5f, -4.8);
+            aabb_max = glm::vec3(1.0f, 0.5f, -3.8f);    
+        }
+        else if (tile == 1){
+            //model = Matrix_Translate(0.0f, -0.5f, 1.0f * (float)tile);
+            aabb_min = glm::vec3(-0.5f, -0.5f, 3.8f);
+            aabb_max = glm::vec3(0.5f, 0.5f, 4.8f);
+        }
+        else{
+            //model = Matrix_Translate(0.0f, -0.5f, -0.5f);
+            aabb_min = glm::vec3(0.0f, -0.5f, -0.5f);
+            aabb_max = glm::vec3(1.0f, 0.5f, 0.5f);
+        }
+        //glUniformMatrix4fv(g_model_uniform, 1 , GL_FALSE , glm::value_ptr(model));
+        //glUniform1i(g_object_id_uniform, cube);
+        //DrawVirtualObject("the_cube");
+
         // guardadno a posição do dragão
-        glm::vec4 dragon_position = glm::vec4(1.0f, 0.0f, 1.5f * (float)tile, 1.0f);
+        //glm::vec4 dragon_position = glm::vec4(1.0f, 0.0f, 1.5f * (float)tile, 1.0f);
 
         // Desenhamos o modelo do plano
-        model = Matrix_Scale(10.0f, 1.0f, 5.0f) * Matrix_Translate(-0.5f, -1.0f, 0.0f);
+        model = Matrix_Scale(10.0f, 1.0f, 5.0f) * Matrix_Translate(-0.5f, -0.6f, 0.0f);
         glUniformMatrix4fv(g_model_uniform, 1 , GL_FALSE , glm::value_ptr(model));
         glUniform1i(g_object_id_uniform, plane);
         DrawVirtualObject("the_plane");
@@ -515,13 +561,43 @@ int main(int argc, char* argv[])
             // atualizando a posição dos inimigos
             enemies[i].position = enemies[i].position + enemies[i].velocity * enemies[i].speed* d_time;
 
+            
+            // verificando se o projétil tocou na câmera livre
+            if (enemies[i].enemy_tile == -1){    
+                if (collisionPointSphere(glm::vec3(camera_position_c.x, camera_position_c.y, camera_position_c.z), glm::vec3(enemies[i].position.x, enemies[i].position.y, enemies[i].position.z + 3.2f), enemies[i].radius + 0.05f)) {
+                    
+                    look_at = 1;
+                }
+            }
+            else if (enemies[i].enemy_tile == 1){
+                if (collisionPointSphere(glm::vec3(camera_position_c.x, camera_position_c.y, camera_position_c.z), glm::vec3(enemies[i].position.x, enemies[i].position.y, enemies[i].position.z - 3.2f), enemies[i].radius + 0.05f)) {
+                    
+                    look_at = 1;
+                }
+            }
+            else {
+                if (collisionPointSphere(glm::vec3(camera_position_c.x, camera_position_c.y, camera_position_c.z), glm::vec3(enemies[i].position.x, enemies[i].position.y, enemies[i].position.z), enemies[i].radius)) {
+                    
+                    look_at = 1;
+                }
+            }
+
             // verificando se o inimigo saiu da área do jogo e removendo ele caso sim
             if (enemies[i].position.x > 10.0f) {
                 enemies.erase(enemies.begin() + i);
                 i--;
                 continue;
             }
-  
+
+            // verificando colisão com o dragão
+            if (collisionAABBsphere(aabb_min, aabb_max, glm::vec3(enemies[i].position.x, enemies[i].position.y, enemies[i].position.z), enemies[i].radius)) {
+                player_dragon.health -= enemies[i].damage;
+                std::cout << "Player health: " << player_dragon.health << std::endl;
+                enemies.erase(enemies.begin() + i);
+                i--;
+                continue;
+            }
+
             // Desenhamos o modelo do inimigo
             model = Matrix_Scale(0.3f, 0.3f, 0.3f) * Matrix_Translate(enemies[i].position.x, enemies[i].position.y, enemies[i].position.z);
             glUniformMatrix4fv(g_model_uniform, 1 , GL_FALSE , glm::value_ptr(model));
@@ -598,6 +674,7 @@ int main(int argc, char* argv[])
             }
         }
 
+        // atualizando a posição dos projéteis
         for (size_t i = 0; i < projectiles.size(); i++) {
             projectiles[i].position = projectiles[i].position - projectiles[i].velocity * projectiles[i].speed * d_time;
 
@@ -610,7 +687,7 @@ int main(int argc, char* argv[])
                     break; // Sair do loop interno para evitar acessar um índice inválido
                 }
             }
-            
+
            // verificando se o projétil saiu da área do jogo e removendo ele caso sim
            if (projectiles[i].position.x < -45.0f) {
                 projectiles.erase(projectiles.begin() + i);

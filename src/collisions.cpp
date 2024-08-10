@@ -18,7 +18,7 @@ bool collisionSphereSphere(float radius1, float radius2, glm::vec4 pos1, glm::ve
 
 }
 
-/*
+
 // colisão AABB x esfera utilizada entre o dragão e os inimigos
 bool collisionAABBsphere(glm::vec3 Min, glm::vec3 Max, glm::vec3 center, float radius)
 {
@@ -27,14 +27,16 @@ bool collisionAABBsphere(glm::vec3 Min, glm::vec3 Max, glm::vec3 center, float r
     float z = glm::max(Min.z, glm::min(center.z, Max.z));
 
     float distance = glm::distance(glm::vec3(x, y, z), center);
+    
     return distance < radius;
 }
 
-bool collisionPointSphere(glm::vec3 point, glm::vec3 center, float radius)
-{
+// colisão ponto x esfera utilizada entre a câmera e os projéteis dos inimigos
+bool collisionPointSphere(glm::vec3 point, glm::vec3 center, float radius){
     float distance = glm::distance(point, center);
+    
+    
     return distance < radius;
 }
-*/
 
 
