@@ -4,6 +4,7 @@
 #include <string>
 #include <glad/glad.h>
 
+/*
 // Definimos uma estrutura que armazenará dados necessários para renderizar
 struct SceneObject
 {
@@ -15,7 +16,7 @@ struct SceneObject
     glm::vec3    bbox_min;    // Axis-Aligned Bounding Box do objeto
     glm::vec3    bbox_max;
 };
-
+*/
 
 bool collisionSphereSphere(float radius1, float radius2, glm::vec4 pos1, glm::vec4 pos2);
 bool collisionAABBsphere(glm::vec3 Min, glm::vec3 Max, glm::vec3 center, float radius);

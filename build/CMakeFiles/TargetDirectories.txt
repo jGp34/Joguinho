@@ -1,3 +1,0 @@
-C:/Users/Roderick/Downloads/Joguinho-main (1)/Joguinho-main/build/CMakeFiles/main.dir
-C:/Users/Roderick/Downloads/Joguinho-main (1)/Joguinho-main/build/CMakeFiles/edit_cache.dir
-C:/Users/Roderick/Downloads/Joguinho-main (1)/Joguinho-main/build/CMakeFiles/rebuild_cache.dir
