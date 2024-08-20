@@ -37,6 +37,7 @@ uniform sampler2D TextureImage0;
 uniform sampler2D TextureImage1;
 uniform sampler2D TextureImage2;
 uniform sampler2D TextureImage3;
+uniform sampler2D TextureImage4;
 
 // O valor de saída ("out") de um Fragment Shader é a cor final do fragmento.
 out vec4 color;
@@ -64,7 +65,8 @@ void main()
     vec4 n = normalize(normal);
 
     // Vetor que define o sentido da fonte de luz em relação ao ponto atual.
-    vec4 l = normalize(vec4(1.0,1.0,0.0,0.0));
+    //vec4 l = normalize(vec4(1.0,1.0,0.0,0.0));
+    vec4 l = normalize(vec4(1.0,1.0,1.0,0.0));
 
     // Vetor que define o sentido da câmera em relação ao ponto atual.
     vec4 v = normalize(camera_position - p);
@@ -122,7 +124,7 @@ void main()
         U = (theta + M_PI)/(2*M_PI);
         V = (phi + M_PI_2)/M_PI;
         
-        Kd = texture(TextureImage0, vec2(U,V)).rgb;
+        Kd = texture(TextureImage1, vec2(U,V)).rgb;
         Ks = vec3(0.0,0.0,0.0);
         Ka = Kd/3;
         q = 1.0;
@@ -138,7 +140,7 @@ void main()
         U = (theta + M_PI)/(2*M_PI);
         V = (phi + M_PI_2)/M_PI;
         
-        Kd = texture(TextureImage1, vec2(U,V)).rgb;
+        Kd = texture(TextureImage0, vec2(U,V)).rgb;
         Ks = vec3(0.0,0.0,0.0);
         Ka = Kd/3;
         q = 1.0;      
@@ -166,7 +168,8 @@ void main()
         U = (position_model.x - minx) / (maxx - minx);
         V = (position_model.y - miny) / (maxy - miny);
 
-        Kd = texture(TextureImage3, vec2(U,V)).rgb;
+        Kd= texture(TextureImage3, vec2(U,V)).rgb;
+        
         Ks = vec3(0.8,0.8,0.8);
         Ka = Kd/2;
         q = 32.0;
@@ -179,11 +182,30 @@ void main()
         V = texcoords.y;
 
         Kd = texture(TextureImage2, vec2(U,V)).rgb;
-        Ks = vec3(0.3,0.3,0.3);
-        Ka = Kd/2.0;
-        q = 20.0;
+        
     }
+/*
+    else if (object_id == CUBE)
+    {
+        vec4 bbox_center = (bbox_min + bbox_max) / 2.0;
+        vec4 vec_p = position_model - bbox_center;
 
+        float px = vec_p.x;
+        float py = vec_p.y;
+        float pz = vec_p.z;
+
+        float ro = length(vec_p);
+        float theta = atan(py, px);
+        float phi = asin(py/ro);
+
+        U = (theta + M_PI)/(2*M_PI);
+        V = (phi + M_PI_2)/M_PI;
+
+        Kd = texture(TextureImage4, vec2(U,V)).rgb;
+        color.rgb = Kd;
+        return;
+    }
+*/
     
     // Espectro da fonte de iluminação
     vec3 I = vec3(1.0,1.0,1.0); // PREENCH AQUI o espectro da fonte de luz

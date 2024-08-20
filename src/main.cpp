@@ -292,6 +292,8 @@ GLint g_object_id_uniform;
 GLint g_bbox_min_uniform;
 GLint g_bbox_max_uniform;
 
+void resetGame();
+
 // Número de texturas carregadas pela função LoadTextureImage()
 GLuint g_NumLoadedTextures = 0;
 
@@ -304,6 +306,11 @@ glm::vec4 get3DBezierCurve(glm::vec3 p0, glm::vec3 p1, glm::vec3 p2, glm::vec3 p
 
     return glm::vec4(x, y, z,1.0f);
 }
+
+glm::vec3 dragon_position(0.625f, 0.0f, 1.5f * 0);  
+glm::vec3 dragon_target_position = dragon_position;
+float dragon_speed = 2.0f;
+
 
 int main(int argc, char* argv[])
 {
@@ -332,8 +339,8 @@ int main(int argc, char* argv[])
     glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 
     // obtendo um timer e setando o tempo de spawn dos inimigos e projéteis
-    double last_time = glfwGetTime();
-    double spawn_interval = 4.0;
+    float last_time = glfwGetTime();
+    float spawn_interval = 2.5;
 
     std::random_device rd;
     std::mt19937 gen(rd());
@@ -402,19 +409,16 @@ int main(int argc, char* argv[])
     LoadShadersFromFiles();
 
     // Carregamos imagens para serem utilizadas como textura
-    LoadTextureImage("../../data/tc-earth_daymap_surface.jpg");      // TextureImage0
-    LoadTextureImage("../../data/tc-earth_nightmap_citylights.gif"); // TextureImage1
-    LoadTextureImage("../../data/grass.jpg");                        // TextureImage2
-    LoadTextureImage("../../data/close-up-pattern-scales.jpg");                  // TextureImage3
+    LoadTextureImage("../../data/tc-earth_daymap_surface.jpg");     // TextureImage0
+    LoadTextureImage("../../data/tc-earth_nightmap_citylights.gif");// TextureImage1
+    LoadTextureImage("../../data/grass.jpg");                       // TextureImage2
+    LoadTextureImage("../../data/Scales.png");                      // TextureImage3
+    LoadTextureImage("../../data/ScalesN.jpeg");                    // TextureImage4
 
     // Construímos a representação de objetos geométricos através de malhas de triângulos
     ObjModel dragonmodel("../../data/dragon.obj");
     ComputeNormals(&dragonmodel);
     BuildTrianglesAndAddToVirtualScene(&dragonmodel);
-
-    ObjModel bunnymodel("../../data/bunny.obj");
-    ComputeNormals(&bunnymodel);
-    BuildTrianglesAndAddToVirtualScene(&bunnymodel);
 
     ObjModel planemodel("../../data/plane.obj");
     ComputeNormals(&planemodel);
@@ -452,8 +456,12 @@ int main(int argc, char* argv[])
     float t_last = glfwGetTime();
     float d_time;
 
-    glm::vec3 aabb_min;
-    glm::vec3 aabb_max;
+    glm::vec3 aabb_min = glm::vec3(0.0f, -0.5f, -0.5f);
+    glm::vec3 aabb_max = glm::vec3(1.0f, 0.5f, 0.5f);
+
+    glm::vec3 target_aabb_min;
+    glm::vec3 target_aabb_max;
+
 
     // Ficamos em um loop infinito, renderizando, até que o usuário feche a janela
     while (!glfwWindowShouldClose(window))
@@ -521,7 +529,6 @@ int main(int argc, char* argv[])
             float field_of_view = 3.141592 / 3.0f;
             projection = Matrix_Perspective(field_of_view, g_ScreenRatio, nearplane, farplane);
         }
-        
 
         glm::mat4 model = Matrix_Identity(); // Transformação identidade de modelagem
 
@@ -542,14 +549,14 @@ int main(int argc, char* argv[])
             
             enemies.push_back(Enemy(
                 (-random_z),
-                glm::vec4(-30.0f, -0.8f, - 5.0f * random_z, 1.0f),
+                glm::vec4(-45.0f, -0.8f, - 5.0f * random_z, 1.0f),
                 glm::vec4(3.0f, 0.0f, 0.0f, 0.0f),
                 (float)random_s * 3.0f,
                 20.0f
             ));
 
             ghosts.push_back(ghost(
-                glm::vec4(-30.0f, -0.8f, - 5.0f * random_g, 1.0f),
+                glm::vec4(-45.0f, -0.8f, - 5.0f * random_g, 1.0f),
                 glm::vec4(3.0f, 0.0f, 0.0f, 0.0f),
                 (float)random_s * 1.0f,
                 20.0f,
@@ -568,28 +575,47 @@ int main(int argc, char* argv[])
         #define cube 5
         #define ghost 6
 
+/*
+        // desenhamos o modelo do cubo
+        model = Matrix_Scale(20.0f, 10.0f, 20.0f)* Matrix_Translate(-0.7f, -0.5f, -0.7f);
+        glUniformMatrix4fv(g_model_uniform, 1 , GL_FALSE , glm::value_ptr(model));
+        glUniform1i(g_object_id_uniform, cube);
+        DrawVirtualObject("the_cube");
+*/
         // Desenhamos o modelo do dragão
-        model = Matrix_Translate(0.625f, 0.0f, 1.5f * (float)tile);
+        dragon_position = glm::mix(dragon_position, dragon_target_position, 0.5f);
+        //model = Matrix_Translate(0.625f, 0.0f, 1.5f * (float)tile);
+        model = Matrix_Translate(dragon_position.x, dragon_position.y, dragon_position.z);
         glUniformMatrix4fv(g_model_uniform, 1 , GL_FALSE , glm::value_ptr(model));
         glUniform1i(g_object_id_uniform, dragon);
         DrawVirtualObject("the_dragon");
 
+
         // Calculamos o modelo do cubo para bounding box
         if (tile == -1){
             //model = Matrix_Translate(0.0f, -0.5f, 2.0f * (float)tile);
-            aabb_min = glm::vec3(0.0f, -0.5f, -4.8);
-            aabb_max = glm::vec3(1.0f, 0.5f, -3.8f);    
+            target_aabb_min = glm::vec3(0.0f, -0.5f, -4.8);
+            target_aabb_max = glm::vec3(1.0f, 0.5f, -3.8f);    
         }
         else if (tile == 1){
             //model = Matrix_Translate(0.0f, -0.5f, 1.0f * (float)tile);
-            aabb_min = glm::vec3(-0.5f, -0.5f, 3.8f);
-            aabb_max = glm::vec3(0.5f, 0.5f, 4.8f);
+            target_aabb_min = glm::vec3(-0.5f, -0.5f, 3.8f);
+            target_aabb_max = glm::vec3(0.5f, 0.5f, 4.8f);
         }
         else{
             //model = Matrix_Translate(0.0f, -0.5f, -0.5f);
-            aabb_min = glm::vec3(0.0f, -0.5f, -0.5f);
-            aabb_max = glm::vec3(1.0f, 0.5f, 0.5f);
+            target_aabb_min = glm::vec3(0.0f, -0.5f, -0.5f);
+            target_aabb_max = glm::vec3(1.0f, 0.5f, 0.5f);
         }
+
+        aabb_min = glm::mix(aabb_min, target_aabb_min, 0.5f);
+        aabb_max = glm::mix(aabb_max, target_aabb_max, 0.5f);
+
+        //desenhamos o modelo do cubo
+        //glUniformMatrix4fv(g_model_uniform, 1 , GL_FALSE , glm::value_ptr(model));
+        //glUniform1i(g_object_id_uniform, cube);
+        //DrawVirtualObject("the_cube");
+
 
         // Desenhamos o modelo do plano
         model = Matrix_Scale(10.0f, 1.0f, 5.0f) * Matrix_Translate(-0.5f, -0.6f, 0.0f);
@@ -688,13 +714,14 @@ int main(int argc, char* argv[])
         }
 
 
-
+        //std::cout << 1.5f * (float)tile << std::endl;
 
         glm::vec4 ortho = crossproduct(camera_view_vector, camera_up_vector);
 
         if (tecla_a_pressionada && !tecla_shift_pressionada) {
             if (tile != 1){
                 tile = 1;
+                dragon_target_position = glm::vec3(0.625f, 0.0f, 1.5f * 1);
             }
         }
         if (tecla_a_pressionada && tecla_shift_pressionada && !look_at) {
@@ -707,6 +734,7 @@ int main(int argc, char* argv[])
         if (tecla_d_pressionada && !tecla_shift_pressionada) {
             if (tile != -1){
                 tile = -1;
+                dragon_target_position = glm::vec3(0.625f, 0.0f, 1.5f * -1);
             }
         }
         if (tecla_d_pressionada && tecla_shift_pressionada && !look_at) {
@@ -719,6 +747,7 @@ int main(int argc, char* argv[])
         if (tecla_s_pressionada && !tecla_shift_pressionada) {
             if (tile != 0){
                 tile = 0;
+                dragon_target_position = glm::vec3(0.625f, 0.0f, 1.5f * 0);
             }
         }
         if (tecla_s_pressionada && tecla_shift_pressionada && !look_at) {
@@ -731,6 +760,7 @@ int main(int argc, char* argv[])
         if (tecla_w_pressionada && !tecla_shift_pressionada) {
             if (tile != 0){
                 tile = 0;
+                dragon_target_position = glm::vec3(0.625f, 0.0f, 1.5f * 0);
             }
         }
         if (tecla_w_pressionada && tecla_shift_pressionada && !look_at) {
@@ -744,21 +774,40 @@ int main(int argc, char* argv[])
             camera_position_c.y += 1.0f * d_time;
         }
 
+        //variaveis para controlar o tempo de spawn dos projeteis
+        float t_now_proj;
+        static float t_last_proj = glfwGetTime();
+        float delta_time_proj;
+
         // quando o player aperta e, uma esfera é lançada da posição do dragão
         if (tecla_e_pressionada) {
-            projectiles.push_back(Projectile(
-                glm::vec4(1.0f, -0.8f, 5.0f * (float)tile, 1.0f),
-                glm::vec4(3.0f, 0.0f, 0.0f, 0.0f),
-                3.0f,
-                10.0f
-            ));
+            t_now_proj = glfwGetTime();
+            delta_time_proj = t_now_proj - t_last_proj;
 
-            // limitando o spawn de projéteis
-            if (delta_time < spawn_interval) {
+            if (delta_time_proj >= 0.35f){
+                projectiles.push_back(Projectile(
+                    glm::vec4(-1.0f, -0.8f, 5.0f * (float)tile, 1.0f),
+                    glm::vec4(3.0f, 0.0f, 0.0f, 0.0f),
+                    3.0f,
+                    10.0f
+                ));
+
+                t_last_proj = t_now_proj;
+            
+            }
+
+            tecla_e_pressionada = false;
+            /*// limitando o spawn de projéteis
+            if (delta_time >= 1.0f) {
                 tecla_e_pressionada = false;
             }
+            else if (delta_time < t_last_proj) {
+                tecla_e_pressionada = false;
+            }
+            */
         }
-
+        //t_now_proj = t_last_proj;
+        //std::cout << dragon_target_position.x << " " << dragon_target_position.y << " " << dragon_target_position.z << std::endl;
         // atualizando a posição dos projéteis
         for (size_t i = 0; i < projectiles.size(); i++) {
             projectiles[i].position = projectiles[i].position - projectiles[i].velocity * projectiles[i].speed * d_time;
@@ -809,7 +858,12 @@ int main(int argc, char* argv[])
         t_last = t_now;
 
 
-        
+        if (player_dragon.health <= 0) {
+            std::cout << "Game Over! Reiniciando o jogo..." << std::endl;
+            tile = 0;
+            look_at = 1;
+            resetGame();
+        }
 
         // Imprimimos na tela informação sobre o número de quadros renderizados
         // por segundo (frames per second).
@@ -835,6 +889,21 @@ int main(int argc, char* argv[])
 
     // Fim do programa
     return 0;
+}
+
+
+void resetGame() {
+
+    // limpando variáveis do jogo
+    enemies.clear();
+    ghosts.clear();
+    projectiles.clear();
+
+    // resetando a posição do dragão
+    dragon_position = glm::vec3(0.625f, 0.0f, 0.0f);
+    dragon_target_position = dragon_position;
+    player_dragon.health = 100;
+
 }
 
 // Função que carrega uma imagem para ser utilizada como textura
@@ -971,6 +1040,7 @@ void LoadShadersFromFiles()
     glUniform1i(glGetUniformLocation(g_GpuProgramID, "TextureImage1"), 1);
     glUniform1i(glGetUniformLocation(g_GpuProgramID, "TextureImage2"), 2);
     glUniform1i(glGetUniformLocation(g_GpuProgramID, "TextureImage3"), 3);
+    glUniform1i(glGetUniformLocation(g_GpuProgramID, "TextureImage4"), 4);
     glUseProgram(0);
 }
 
