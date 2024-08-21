@@ -27,6 +27,8 @@ Rodrigo Brock realizou as seguintes tarefasd do jogo:
 - Foi utilizado para corrigir erros sintáticos nos arquivos de vertex shader e fragment shader, os quais o VScode não contava com um corretor sintático build-in, como é o caso para arquivos C++ e C. 
 - Foi utilizado também esclarecer dúvidas de funções como glm::mix utilizadas no código e não entendidas muito bem pelo grupo utilizando apenas a documentação na internet.
 
+![image](https://github.com/user-attachments/assets/b4eb6514-b087-4af1-82f4-28de4c7a196d)
+
 ##Conceitos de Computação Gráfica:
 Transformações geométricas foram utilizadas para controlar o movimento do dragão, bem como o movimento dos inimigos e dos projéteis do drãgão.
 
@@ -45,6 +47,8 @@ Modelos de iluminação de Lambert foi utilizado para todos os objetos da cena a
 Mapeamento de texturas estão disponíveis para todos os objetos da cena, que foram feitos através de imagens. 
 
 Curvas de Bezzier foram aplicadas para a movimentação do inimigo especial, que se move em um padrão de movimento diferente.
+
+![image](https://github.com/user-attachments/assets/0af0ffd8-6796-48c8-81de-22a5997ffe45)
 
 
 ## Manual de utilização da aplicação:
