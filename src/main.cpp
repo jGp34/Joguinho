@@ -409,7 +409,8 @@ int main(int argc, char* argv[])
     LoadShadersFromFiles();
 
     // Carregamos imagens para serem utilizadas como textura
-    // As imagens foram retiradas do seguinte site FONTE: https://opengameart.org/
+    // FONTE: https://opengameart.org/
+    // Todas as texturas foram retiradas do site acima
     LoadTextureImage("../../data/water.png");     // TextureImage0
     LoadTextureImage("../../data/lava.png");// TextureImage1
     LoadTextureImage("../../data/Brick.png");                       // TextureImage2
