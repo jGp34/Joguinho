@@ -5,7 +5,7 @@
 //    INF01047 Fundamentos de Computação Gráfica
 //               Prof. Eduardo Gastal
 //
-//                   LABORATÓRIO 5
+//                   TRABALHO FINAL
 //
 
 // Arquivos "headers" padrões de C podem ser incluídos em um
@@ -139,13 +139,12 @@ struct Enemy {
 
 // estrutura para representar o jogador/dragão
 struct Dragon {
-    float health;
+    int health;
     glm::vec4 position;
-    glm::vec4 velocity;
-    float speed;
+    float velocity;
 
-    Dragon(float health, glm::vec4 position, glm::vec4 velocity, float speed)
-        : health(health), position(position), velocity(velocity), speed(speed) {}
+    Dragon(int health, glm::vec4 position, float velocity)
+        : health(health), position(position), velocity(velocity) {}
 };
 
 // estrutura do fantasma
@@ -171,6 +170,7 @@ bool tecla_e_pressionada = false;
 bool tecla_espaco_pressionada = false;
 bool tecla_shift_pressionada = false;
 bool tecla_w_pressionada = false;
+
 
 // Declaração de funções utilizadas para pilha de matrizes de modelagem.
 void PushMatrix(glm::mat4 M);
@@ -244,7 +244,7 @@ std::stack<glm::mat4>  g_MatrixStack;
 // algumas variáveis globais para controle do jogo
 std::vector<Projectile> projectiles;
 std::vector<Enemy> enemies;
-Dragon player_dragon(100.0f, glm::vec4(0.0f, 0.0f, 0.0f, 1.0f), glm::vec4(0.0f, 0.0f, 0.0f, 0.0f), 5.0f);
+Dragon player_dragon(100, glm::vec4(0.0f, 0.0f, 0.0f, 1.0f), 8.0f);
 std::vector<ghost> ghosts;
 
 // Razão de proporção da janela (largura/altura). Veja função FramebufferSizeCallback().
@@ -265,8 +265,8 @@ bool g_MiddleMouseButtonPressed = false; // Análogo para botão do meio do mous
 // usuário através do mouse (veja função CursorPosCallback()). A posição
 // efetiva da câmera é calculada dentro da função main(), dentro do loop de
 // renderização.
-float g_CameraTheta = 0.0f; // Ângulo no plano ZX em relação ao eixo Z
-float g_CameraPhi = 0.0f;   // Ângulo em relação ao eixo Y
+float g_CameraTheta = 1.6f; // Ângulo no plano ZX em relação ao eixo Z
+float g_CameraPhi = 0.5f;   // Ângulo em relação ao eixo Y
 float g_CameraDistance = 3.5f; // Distância da câmera para a origem
 
 // Variáveis que controlam rotação do antebraço
@@ -292,6 +292,7 @@ GLint g_object_id_uniform;
 GLint g_bbox_min_uniform;
 GLint g_bbox_max_uniform;
 
+// declarando a função para resetar o jogo
 void resetGame();
 
 // Número de texturas carregadas pela função LoadTextureImage()
@@ -307,10 +308,12 @@ glm::vec4 get3DBezierCurve(glm::vec3 p0, glm::vec3 p1, glm::vec3 p2, glm::vec3 p
     return glm::vec4(x, y, z,1.0f);
 }
 
+// algumas variáveis globais para controle do jogo
 glm::vec3 dragon_position(0.625f, 0.0f, 1.5f * 0);  
 glm::vec3 dragon_target_position = dragon_position;
 float dragon_speed = 2.0f;
-
+int pontos = 0;
+int melhor_pontuacao = 0;
 
 int main(int argc, char* argv[])
 {
@@ -346,11 +349,13 @@ int main(int argc, char* argv[])
     std::mt19937 gen(rd());
     std::uniform_int_distribution<> dis(-1, 1);
     std::uniform_int_distribution<> dis2(1, 3);
+    std::uniform_int_distribution<> dis3(1, 3);
+    std::uniform_int_distribution<> dis4(0, 1);
 
     // Criamos uma janela do sistema operacional, com 800 colunas e 600 linhas
     // de pixels, e com título "INF01047 ...".
     GLFWwindow* window;
-    window = glfwCreateWindow(800, 600, "INF01047 - Seu Cartao - Seu Nome", NULL, NULL);
+    window = glfwCreateWindow(800, 600, "INF01047 - Trabalho FInal", NULL, NULL);
     if (!window)
     {
         glfwTerminate();
@@ -388,19 +393,14 @@ int main(int argc, char* argv[])
     const GLubyte *glslversion = glGetString(GL_SHADING_LANGUAGE_VERSION);
 
     printf("GPU: %s, %s, OpenGL %s, GLSL %s\n", vendor, renderer, glversion, glslversion);
- 
-    float r = g_CameraDistance;
-    float y = r*sin(g_CameraPhi);
-    float z = r*cos(g_CameraPhi)*cos(g_CameraTheta);
-    float x = r*cos(g_CameraPhi)*sin(g_CameraTheta);
 
-    //glm::vec4 camera_position_c  = glm::vec4(x,y,z,1.0f); // Ponto "c", centro da câmera
-    glm::vec4 camera_position_c  = glm::vec4(-2.0f,-0.02f,-0.14,1.0f);
+    // setando variáveis relacionadas à câmera do jogo
+    glm::vec4 camera_position_c  = glm::vec4(-200.0f,-0.02f,-0.14,1.0f);
     glm::vec4 camera_lookat_l    = glm::vec4(0.0f,0.0f,0.0f,1.0f); // Ponto "l", para onde a câmera (look-at) estará sempre olhando
-    glm::vec4 camera_view_vector = glm::vec4(-13.5f, -7.3, 12.0f,1.0f); // Vetor "view", sentido para onde a câmera está virada
+    glm::vec4 camera_view_vector = glm::normalize(camera_lookat_l - camera_position_c); // Vetor "view", sentido para onde a câmera está virada
     glm::vec4 camera_up_vector   = glm::vec4(0.0f,1.0f,0.0f,0.0f); // Vetor "up" fixado para apontar para o "céu" (eito Y global)
 
-    // tile do projétil
+    // tile inicial do projétil e do jogador
     int tile = 0;
 
     // Carregamos os shaders de vértices e de fragmentos que serão utilizados
@@ -409,11 +409,12 @@ int main(int argc, char* argv[])
     LoadShadersFromFiles();
 
     // Carregamos imagens para serem utilizadas como textura
-    LoadTextureImage("../../data/tc-earth_daymap_surface.jpg");     // TextureImage0
-    LoadTextureImage("../../data/tc-earth_nightmap_citylights.gif");// TextureImage1
-    LoadTextureImage("../../data/grass.jpg");                       // TextureImage2
-    LoadTextureImage("../../data/Scales.png");                      // TextureImage3
-    LoadTextureImage("../../data/ScalesN.jpeg");                    // TextureImage4
+    LoadTextureImage("../../data/water.png");     // TextureImage0
+    LoadTextureImage("../../data/lava.png");// TextureImage1
+    LoadTextureImage("../../data/Brick.png");                       // TextureImage2
+    LoadTextureImage("../../data/scales.jpg");                      // TextureImage3
+    LoadTextureImage("../../data/rock.jpg");                    // TextureImage4
+    
 
     // Construímos a representação de objetos geométricos através de malhas de triângulos
     ObjModel dragonmodel("../../data/dragon.obj");
@@ -449,18 +450,22 @@ int main(int argc, char* argv[])
     glCullFace(GL_BACK);
     glFrontFace(GL_CCW);
 
-    float position = -10.0f;
+    // variável que inicia o tipo de câmera do jogo
     int look_at = 1;
 
+    // variáveis para controle do tempo para movimentos dos inimigos e projéteis
     float t_now;
     float t_last = glfwGetTime();
     float d_time;
 
+    // variáveis para checar a colisão do dragão com os inimigos
     glm::vec3 aabb_min = glm::vec3(0.0f, -0.5f, -0.5f);
     glm::vec3 aabb_max = glm::vec3(1.0f, 0.5f, 0.5f);
-
     glm::vec3 target_aabb_min;
     glm::vec3 target_aabb_max;
+
+    // variável para controle do tempo de spawn dos inimigos
+    int incremento = 1;
 
 
     // Ficamos em um loop infinito, renderizando, até que o usuário feche a janela
@@ -493,22 +498,18 @@ int main(int argc, char* argv[])
         float z = r*cos(g_CameraPhi)*cos(g_CameraTheta);
         float x = r*cos(g_CameraPhi)*sin(g_CameraTheta);
 
-        // Abaixo definimos as varáveis que efetivamente definem a câmera virtual.
-        // Veja slides 195-227 e 229-234 do documento Aula_08_Sistemas_de_Coordenadas.pdf.
+
+        // Abaixo definimos as varáveis que efetivamente definem a câmera virtual a depender do tipo de camera que o jogar quiser controlar
         if (look_at){
             camera_position_c  = glm::vec4(x,y,z,1.0f); // Ponto "c", centro da câmera
             camera_lookat_l    = glm::vec4(0.0f,0.0f,0.0f,1.0f); // Ponto "l", para onde a câmera (look-at) estará sempre olhando
             camera_view_vector = camera_lookat_l - camera_position_c; // Vetor "view", sentido para onde a câmera está virada
             camera_up_vector   = glm::vec4(0.0f,1.0f,0.0f,0.0f); // Vetor "up" fixado para apontar para o "céu" (eito Y global)
-            //glm::mat4 view = Matrix_Camera_View(camera_position_c, camera_view_vector, camera_up_vector);
         }
         else{
-            //std::cout << "position c: " << camera_position_c.x << " " << camera_position_c.y << " " << camera_position_c.z << std::endl;
             camera_view_vector = glm::vec4(-x,-y,-z,0.0f);
             camera_up_vector   = glm::vec4(0.0f,1.0f,0.0f,0.0f); // Vetor "up" fixado para apontar para o "céu" (eito Y global)
-            //glm::mat4 view = Matrix_Camera_View(camera_position_c, camera_view_vector, camera_up_vector);
         }
-        //std::cout << "view vector: " << camera_view_vector.x << " " << camera_view_vector.y << " " << camera_view_vector.z << std::endl;
 
         // Computamos a matriz "View" utilizando os parâmetros da câmera para
         // definir o sistema de coordenadas da câmera.  Veja slides 2-14, 184-190 e 236-242 do documento Aula_08_Sistemas_de_Coordenadas.pdf.
@@ -538,30 +539,34 @@ int main(int argc, char* argv[])
         glUniformMatrix4fv(g_view_uniform       , 1 , GL_FALSE , glm::value_ptr(view));
         glUniformMatrix4fv(g_projection_uniform , 1 , GL_FALSE , glm::value_ptr(projection));
 
+        // variáveis para controle do tempo de spawn dos inimigos
         float current_time = glfwGetTime();
         float delta_time = current_time - last_time;
         
         // verificando se é hora de spawnar um novo inimigo
         if (delta_time >= spawn_interval) {
             int random_z = dis(gen);
-            int random_g = dis(gen);
-            int random_s = dis2(gen);
+            int random_g = dis2(gen);
+            int random_s = dis3(gen);
             
             enemies.push_back(Enemy(
                 (-random_z),
                 glm::vec4(-45.0f, -0.8f, - 5.0f * random_z, 1.0f),
                 glm::vec4(3.0f, 0.0f, 0.0f, 0.0f),
-                (float)random_s * 3.0f,
+                (float)random_s * 5.0f,
                 20.0f
             ));
 
-            ghosts.push_back(ghost(
-                glm::vec4(-45.0f, -0.8f, - 5.0f * random_g, 1.0f),
-                glm::vec4(3.0f, 0.0f, 0.0f, 0.0f),
-                (float)random_s * 1.0f,
-                20.0f,
-                0.0f
-            ));
+            // um possível spawn de um fantasma
+            if (dis4(gen)){
+                ghosts.push_back(ghost(
+                    glm::vec4(-45.0f, -0.8f, - 5.0f * random_g, 1.0f),
+                    glm::vec4(3.0f, 0.0f, 0.0f, 0.0f),
+                    (float)random_s * 2.5f,
+                    20.0f,
+                    0.0f
+                ));
+            }
 
             last_time = current_time;
         }
@@ -570,21 +575,14 @@ int main(int argc, char* argv[])
         #define dragon 0
         #define bunny  1
         #define plane  2
-        #define sphere 3
+        #define enemie 3
         #define projectile 4
         #define cube 5
         #define ghost 6
 
-/*
-        // desenhamos o modelo do cubo
-        model = Matrix_Scale(20.0f, 10.0f, 20.0f)* Matrix_Translate(-0.7f, -0.5f, -0.7f);
-        glUniformMatrix4fv(g_model_uniform, 1 , GL_FALSE , glm::value_ptr(model));
-        glUniform1i(g_object_id_uniform, cube);
-        DrawVirtualObject("the_cube");
-*/
+
         // Desenhamos o modelo do dragão
-        dragon_position = glm::mix(dragon_position, dragon_target_position, 0.5f);
-        //model = Matrix_Translate(0.625f, 0.0f, 1.5f * (float)tile);
+        dragon_position = glm::mix(dragon_position, dragon_target_position, player_dragon.velocity * d_time);
         model = Matrix_Translate(dragon_position.x, dragon_position.y, dragon_position.z);
         glUniformMatrix4fv(g_model_uniform, 1 , GL_FALSE , glm::value_ptr(model));
         glUniform1i(g_object_id_uniform, dragon);
@@ -593,36 +591,33 @@ int main(int argc, char* argv[])
 
         // Calculamos o modelo do cubo para bounding box
         if (tile == -1){
-            //model = Matrix_Translate(0.0f, -0.5f, 2.0f * (float)tile);
-            target_aabb_min = glm::vec3(0.0f, -0.5f, -4.8);
-            target_aabb_max = glm::vec3(1.0f, 0.5f, -3.8f);    
+            target_aabb_min = glm::vec3(0.0f, -0.5f, -4.8f);
+            target_aabb_max = glm::vec3(5.0f, 0.5f, -3.8f);    
         }
         else if (tile == 1){
-            //model = Matrix_Translate(0.0f, -0.5f, 1.0f * (float)tile);
             target_aabb_min = glm::vec3(-0.5f, -0.5f, 3.8f);
-            target_aabb_max = glm::vec3(0.5f, 0.5f, 4.8f);
+            target_aabb_max = glm::vec3(4.5f, 0.5f, 4.8f);
         }
         else{
-            //model = Matrix_Translate(0.0f, -0.5f, -0.5f);
             target_aabb_min = glm::vec3(0.0f, -0.5f, -0.5f);
-            target_aabb_max = glm::vec3(1.0f, 0.5f, 0.5f);
+            target_aabb_max = glm::vec3(5.0f, 0.5f, 0.5f);
         }
 
-        aabb_min = glm::mix(aabb_min, target_aabb_min, 0.5f);
-        aabb_max = glm::mix(aabb_max, target_aabb_max, 0.5f);
+        // atualizamos a posição da bounding box do dragão
+        aabb_min = glm::mix(aabb_min, target_aabb_min, player_dragon.velocity * d_time);
+        aabb_max = glm::mix(aabb_max, target_aabb_max, player_dragon.velocity * d_time);
 
-        //desenhamos o modelo do cubo
-        //glUniformMatrix4fv(g_model_uniform, 1 , GL_FALSE , glm::value_ptr(model));
-        //glUniform1i(g_object_id_uniform, cube);
-        //DrawVirtualObject("the_cube");
+        // Desenhamos o modelo do plano -> chão (é interessante notar que, para evitar textura esticada, desenhamos vários planos)
+        for (int j = 0; j < 10; j++){
+            for (int i = 0; i < 5; i++){
+                model =  Matrix_Translate(3.8f - (2*j), -0.6f, 3.5f - (2*i));
+                glUniformMatrix4fv(g_model_uniform, 1 , GL_FALSE , glm::value_ptr(model));
+                glUniform1i(g_object_id_uniform, plane);
+                DrawVirtualObject("the_plane");
+            }
+        }
 
-
-        // Desenhamos o modelo do plano
-        model = Matrix_Scale(10.0f, 1.0f, 5.0f) * Matrix_Translate(-0.5f, -0.6f, 0.0f);
-        glUniformMatrix4fv(g_model_uniform, 1 , GL_FALSE , glm::value_ptr(model));
-        glUniform1i(g_object_id_uniform, plane);
-        DrawVirtualObject("the_plane");
-
+        // novas variáveis de tempo
         t_now = glfwGetTime();
         d_time = t_now - t_last;
 
@@ -631,29 +626,8 @@ int main(int argc, char* argv[])
             // atualizando a posição dos inimigos
             enemies[i].position = enemies[i].position + enemies[i].velocity * enemies[i].speed* d_time;
 
-            
-            // verificando se o projétil tocou na câmera livre
-            if (enemies[i].enemy_tile == -1){    
-                if (collisionPointSphere(glm::vec3(camera_position_c.x, camera_position_c.y, camera_position_c.z), glm::vec3(enemies[i].position.x, enemies[i].position.y, enemies[i].position.z + 3.2f), enemies[i].radius + 0.05f)) {
-                    
-                    look_at = 1;
-                }
-            }
-            else if (enemies[i].enemy_tile == 1){
-                if (collisionPointSphere(glm::vec3(camera_position_c.x, camera_position_c.y, camera_position_c.z), glm::vec3(enemies[i].position.x, enemies[i].position.y, enemies[i].position.z - 3.2f), enemies[i].radius + 0.05f)) {
-                    
-                    look_at = 1;
-                }
-            }
-            else {
-                if (collisionPointSphere(glm::vec3(camera_position_c.x, camera_position_c.y, camera_position_c.z), glm::vec3(enemies[i].position.x, enemies[i].position.y, enemies[i].position.z), enemies[i].radius)) {
-                    
-                    look_at = 1;
-                }
-            }
-
-            // verificando se o inimigo saiu da área do jogo e removendo ele caso sim
-            if (enemies[i].position.x > 10.0f) {
+            if (collisionPointPlane(glm::vec3(enemies[i].position.x, enemies[i].position.y, enemies[i].position.z), glm::vec3(-1.0f, 0.0f, 0.0f), glm::vec3(14.0f, 0.0f, 1.0f))){
+                // apagando inimigos que saíram da área do jogo
                 enemies.erase(enemies.begin() + i);
                 i--;
                 continue;
@@ -662,7 +636,7 @@ int main(int argc, char* argv[])
             // verificando colisão com o dragão
             if (collisionAABBsphere(aabb_min, aabb_max, glm::vec3(enemies[i].position.x, enemies[i].position.y, enemies[i].position.z), enemies[i].radius)) {
                 player_dragon.health -= enemies[i].damage;
-                std::cout << "Player health: " << player_dragon.health << std::endl;
+                //std::cout << "Player health: " << player_dragon.health << std::endl;
                 enemies.erase(enemies.begin() + i);
                 i--;
                 continue;
@@ -671,7 +645,7 @@ int main(int argc, char* argv[])
             // Desenhamos o modelo do inimigo
             model = Matrix_Scale(0.3f, 0.3f, 0.3f) * Matrix_Translate(enemies[i].position.x, enemies[i].position.y, enemies[i].position.z);
             glUniformMatrix4fv(g_model_uniform, 1 , GL_FALSE , glm::value_ptr(model));
-            glUniform1i(g_object_id_uniform, sphere);
+            glUniform1i(g_object_id_uniform, enemie);
             DrawVirtualObject("the_sphere");
         }
 
@@ -683,7 +657,8 @@ int main(int argc, char* argv[])
             ghosts[i].bez+=ghosts[i].speed* d_time*0.1;
 
             // verificando se o fantasma saiu da área do jogo e removendo ele caso sim
-            if (ghosts[i].position.x > 10.0f) {
+            if (collisionPointPlane(glm::vec3(ghosts[i].position.x, ghosts[i].position.y, ghosts[i].position.z), glm::vec3(-1.0f, 0.0f, 0.0f), glm::vec3(9.0f, 0.0f, 1.0f))){
+                // apagando inimigos que saíram da área do jogo
                 ghosts.erase(ghosts.begin() + i);
                 i--;
                 continue;
@@ -692,18 +667,10 @@ int main(int argc, char* argv[])
             // verificando colisão com o dragão
             if (collisionAABBsphere(aabb_min, aabb_max, glm::vec3(ghosts[i].position.x, ghosts[i].position.y, ghosts[i].position.z), ghosts[i].radius)) {
                 player_dragon.health -= ghosts[i].damage;
-                std::cout << "Player health: " << player_dragon.health << std::endl;
+                //std::cout << "Player health: " << player_dragon.health << std::endl;
                 ghosts.erase(ghosts.begin() + i);
                 i--;
                 continue;
-            }
-
-            // verificando se o projétil tocou na câmera livre
-            if (ghosts[i].position.z > 0.0f) {
-                if (collisionPointSphere(glm::vec3(camera_position_c.x, camera_position_c.y, camera_position_c.z), glm::vec3(ghosts[i].position.x, ghosts[i].position.y, ghosts[i].position.z), ghosts[i].radius)) {
-                    
-                    look_at = 1;
-                }
             }
 
             // Desenhamos o modelo do fantasma 
@@ -714,10 +681,10 @@ int main(int argc, char* argv[])
         }
 
 
-        //std::cout << 1.5f * (float)tile << std::endl;
-
+        // vetor perpendicular ao vetor de visão da câmera e ao vetor up
         glm::vec4 ortho = crossproduct(camera_view_vector, camera_up_vector);
 
+        // varias checagens de teclas pressionadas. A depender da tecla pressionada, o dragão se move, a câmera se move, ou o tipo de câmera muda
         if (tecla_a_pressionada && !tecla_shift_pressionada) {
             if (tile != 1){
                 tile = 1;
@@ -725,9 +692,9 @@ int main(int argc, char* argv[])
             }
         }
         if (tecla_a_pressionada && tecla_shift_pressionada && !look_at) {
-            camera_position_c.x -= ortho.x * 1.0f * d_time;
-            camera_position_c.z -= ortho.z * 1.0f * d_time;
-            camera_position_c.y -= ortho.y * 1.0f * d_time;
+            camera_position_c.x -= ortho.x * 1.2f * d_time;
+            camera_position_c.z -= ortho.z * 1.2f * d_time;
+            camera_position_c.y -= ortho.y * 1.2f * d_time;
         }
 
 
@@ -738,9 +705,9 @@ int main(int argc, char* argv[])
             }
         }
         if (tecla_d_pressionada && tecla_shift_pressionada && !look_at) {
-            camera_position_c.x += ortho.x * 1.0f * d_time;
-            camera_position_c.z += ortho.z * 1.0f * d_time;
-            camera_position_c.y += ortho.y * 1.0f * d_time;
+            camera_position_c.x += ortho.x * 1.2f * d_time;
+            camera_position_c.z += ortho.z * 1.2f * d_time;
+            camera_position_c.y += ortho.y * 1.2f * d_time;
         }
 
 
@@ -751,10 +718,7 @@ int main(int argc, char* argv[])
             }
         }
         if (tecla_s_pressionada && tecla_shift_pressionada && !look_at) {
-            camera_position_c = Matrix_Translate(camera_view_vector.x * -1.0f * d_time, 
-                                                 camera_view_vector.y * -1.0f * d_time, 
-                                                 camera_view_vector.z * -1.0f * d_time) * camera_position_c;
-        
+            camera_position_c = Matrix_Translate(camera_view_vector.x * -1.2f * d_time, camera_view_vector.y * -1.2f * d_time, camera_view_vector.z * -1.2f * d_time) * camera_position_c;
         }
 
         if (tecla_w_pressionada && !tecla_shift_pressionada) {
@@ -764,14 +728,11 @@ int main(int argc, char* argv[])
             }
         }
         if (tecla_w_pressionada && tecla_shift_pressionada && !look_at) {
-            camera_position_c = Matrix_Translate(camera_view_vector.x * 1.0f * d_time, 
-                                                 camera_view_vector.y * 1.0f * d_time, 
-                                                 camera_view_vector.z * 1.0f * d_time) * camera_position_c;
-        
+            camera_position_c = Matrix_Translate(camera_view_vector.x * 1.2f * d_time, camera_view_vector.y * 1.2f * d_time, camera_view_vector.z * 1.2f * d_time) * camera_position_c;
         }
 
         if (tecla_espaco_pressionada && tecla_shift_pressionada && !look_at) {
-            camera_position_c.y += 1.0f * d_time;
+            camera_position_c.y += 1.5f * d_time;
         }
 
         //variaveis para controlar o tempo de spawn dos projeteis
@@ -779,7 +740,7 @@ int main(int argc, char* argv[])
         static float t_last_proj = glfwGetTime();
         float delta_time_proj;
 
-        // quando o player aperta e, uma esfera é lançada da posição do dragão
+        // quando o player aperta e, um projétil é lançado da posição do dragão
         if (tecla_e_pressionada) {
             t_now_proj = glfwGetTime();
             delta_time_proj = t_now_proj - t_last_proj;
@@ -797,40 +758,36 @@ int main(int argc, char* argv[])
             }
 
             tecla_e_pressionada = false;
-            /*// limitando o spawn de projéteis
-            if (delta_time >= 1.0f) {
-                tecla_e_pressionada = false;
-            }
-            else if (delta_time < t_last_proj) {
-                tecla_e_pressionada = false;
-            }
-            */
         }
-        //t_now_proj = t_last_proj;
-        //std::cout << dragon_target_position.x << " " << dragon_target_position.y << " " << dragon_target_position.z << std::endl;
+
         // atualizando a posição dos projéteis
         for (size_t i = 0; i < projectiles.size(); i++) {
             projectiles[i].position = projectiles[i].position - projectiles[i].velocity * projectiles[i].speed * d_time;
 
+            // verificando colisão com os projéteis e inimigos
             for (size_t j = 0; j < enemies.size() && j < MAX_ENEMIES; j++) {
                 if (collisionSphereSphere(projectiles[i].radius, enemies[j].radius, projectiles[i].position, enemies[j].position)) {
+                    pontos += 10 * enemies[j].speed;
                     enemies.erase(enemies.begin() + j);
                     projectiles.erase(projectiles.begin() + i);
-                    i--; // Ajustar o índice após a remoção
+                    i--; // Ajustar o índice após a remoção;
                     break; // Sair do loop interno para evitar acessar um índice inválido
                 }
             }
 
             // verificando se o projétil saiu da área do jogo e removendo ele caso sim
-            if (i < projectiles.size() && projectiles[i].position.x < -45.0f) {
+            if (collisionPointPlane(glm::vec3(projectiles[i].position.x, projectiles[i].position.y, projectiles[i].position.z), glm::vec3(1.0f, 0.0f, 0.0f), glm::vec3(-48.0f, 0.0f, 1.0f))){
                 projectiles.erase(projectiles.begin() + i);
                 i--;
+                pontos -= 50;
+                player_dragon.health -= 10;
                 continue;
             }
 
             // verificando colisão com os projéteis e fantasmas
             for (size_t j = 0; j < ghosts.size(); j++) {
                 if (collisionSphereSphere(ghosts[j].radius, projectiles[i].radius, ghosts[j].position, projectiles[i].position)) {
+                    pontos += 10 * ghosts[j].speed;
                     ghosts.erase(ghosts.begin() + j);
                     projectiles.erase(projectiles.begin() + i);
                     i--; // Ajustar o índice após a remoção
@@ -847,6 +804,10 @@ int main(int argc, char* argv[])
             }
         }
 
+        // checagens de placar e pontuação
+        if (pontos > melhor_pontuacao) {
+            melhor_pontuacao = pontos;
+        }
 
         if (tecla_m_pressionada) {
             look_at = 1;
@@ -857,11 +818,30 @@ int main(int argc, char* argv[])
 
         t_last = t_now;
 
+        // criando as strings a serem colocadas na tela do jogador
+        std::string pontos_text = "Pontos: " + std::to_string(pontos);
+        std::string melhor_pontuacao_text = "Melhor Pontuacao: " + std::to_string(melhor_pontuacao);
+        std::string vida_text = "Vida: " + std::to_string(player_dragon.health);
 
+        // imprimindo as strings na tela
+        float pad = TextRendering_LineHeight(window);
+        TextRendering_PrintString(window, pontos_text.c_str(), -1.00f, 18.0f*pad, 1.2f);
+        TextRendering_PrintString(window, melhor_pontuacao_text.c_str(), -1.00f, 16.5f * pad, 1.2f);
+        TextRendering_PrintString(window, vida_text.c_str(), -1.00f, 15.0f * pad, 1.2f);
+
+        // de 1000 em 1000 pontos o jogo fica mais difícil -> tempo de spawn dos inimigos diminui (não fica abaixo de 1 segundo por questões de jogabilidade)
+        if ((pontos >= (1000 * incremento)) && (spawn_interval > 1.0f)){
+            spawn_interval -= 0.5f;
+            incremento++;
+            player_dragon.health = 100;
+        }
+
+        // resetando algumas variáveis do jogo após um game over
         if (player_dragon.health <= 0) {
-            std::cout << "Game Over! Reiniciando o jogo..." << std::endl;
             tile = 0;
             look_at = 1;
+            incremento = 1;
+            spawn_interval = 2.5f;
             resetGame();
         }
 
@@ -891,13 +871,14 @@ int main(int argc, char* argv[])
     return 0;
 }
 
-
+// função para fazer o reset do jogo depois de um game over
 void resetGame() {
 
     // limpando variáveis do jogo
     enemies.clear();
     ghosts.clear();
     projectiles.clear();
+    pontos = 0;
 
     // resetando a posição do dragão
     dragon_position = glm::vec3(0.625f, 0.0f, 0.0f);
@@ -1872,6 +1853,7 @@ void TextRendering_ShowFramesPerSecond(GLFWwindow* window)
 
     TextRendering_PrintString(window, buffer, 1.0f-(numchars + 1)*charwidth, 1.0f-lineheight, 1.0f);
 }
+
 
 // Função para debugging: imprime no terminal todas informações de um modelo
 // geométrico carregado de um arquivo ".obj".

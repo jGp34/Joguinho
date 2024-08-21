@@ -1,3 +1,0 @@
-C:/Users/Roderick/Documents/GitHub/Joguinho/build/CMakeFiles/main.dir
-C:/Users/Roderick/Documents/GitHub/Joguinho/build/CMakeFiles/edit_cache.dir
-C:/Users/Roderick/Documents/GitHub/Joguinho/build/CMakeFiles/rebuild_cache.dir

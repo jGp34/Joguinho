@@ -22,7 +22,7 @@ uniform mat4 projection;
 #define DRAGON 0
 #define BUNNY  1
 #define PLANE  2
-#define SPHERE 3
+#define ENEMIE 3
 #define PROJECTILE 4
 #define CUBE 5
 #define GHOST 6
@@ -41,6 +41,7 @@ uniform sampler2D TextureImage4;
 
 // O valor de saída ("out") de um Fragment Shader é a cor final do fragmento.
 out vec4 color;
+in vec4 cor_v;
 
 // Constantes
 #define M_PI   3.14159265358979323846
@@ -84,26 +85,8 @@ void main()
     vec3 Ka; // Refletância ambiente
     float q; // Expoente especular para o modelo de iluminação de Phong
 
-    if ( object_id == SPHERE )
+    if ( object_id == ENEMIE )
     {
-        // PREENCHA AQUI as coordenadas de textura da esfera, computadas com
-        // projeção esférica EM COORDENADAS DO MODELO. Utilize como referência
-        // o slides 134-150 do documento Aula_20_Mapeamento_de_Texturas.pdf.
-        // A esfera que define a projeção deve estar centrada na posição
-        // "bbox_center" definida abaixo.
-
-        // Você deve utilizar:
-        //   função 'length( )' : comprimento Euclidiano de um vetor
-        //   função 'atan( , )' : arcotangente. Veja https://en.wikipedia.org/wiki/Atan2.
-        //   função 'asin( )'   : seno inverso.
-        //   constante M_PI
-        //   variável position_model
-
-        Kd = vec3(0.8,0.4,0.08);
-        Ks = vec3(0.0,0.0,0.0);
-        Ka = vec3(0.4,0.2,0.04);
-        q = 1.0;
-
         vec4 bbox_center = (bbox_min + bbox_max) / 2.0;
         vec4 vec_p = position_model - bbox_center;
 
@@ -112,6 +95,10 @@ void main()
 
         U = (theta + M_PI)/(2*M_PI);
         V = (phi + M_PI_2)/M_PI;
+        
+        Kd = texture(TextureImage4, vec2(U,V)).rgb;
+        Ka = Kd/3;
+        q = 1.0;
     }
     else if ( object_id == PROJECTILE)
     {
@@ -147,15 +134,6 @@ void main()
     }
     else if ( object_id == DRAGON )
     {
-        // PREENCHA AQUI as coordenadas de textura do coelho, computadas com
-        // projeção planar XY em COORDENADAS DO MODELO. Utilize como referência
-        // o slides 99-104 do documento Aula_20_Mapeamento_de_Texturas.pdf,
-        // e também use as variáveis min*/max* definidas abaixo para normalizar
-        // as coordenadas de textura U e V dentro do intervalo [0,1]. Para
-        // tanto, veja por exemplo o mapeamento da variável 'p_v' utilizando
-        // 'h' no slides 158-160 do documento Aula_20_Mapeamento_de_Texturas.pdf.
-        // Veja também a Questão 4 do Questionário 4 no Moodle.
-
         float minx = bbox_min.x;
         float maxx = bbox_max.x;
 
@@ -170,7 +148,6 @@ void main()
 
         Kd= texture(TextureImage3, vec2(U,V)).rgb;
         
-        Ks = vec3(0.8,0.8,0.8);
         Ka = Kd/2;
         q = 32.0;
     }
@@ -184,28 +161,8 @@ void main()
         Kd = texture(TextureImage2, vec2(U,V)).rgb;
         
     }
-/*
-    else if (object_id == CUBE)
-    {
-        vec4 bbox_center = (bbox_min + bbox_max) / 2.0;
-        vec4 vec_p = position_model - bbox_center;
 
-        float px = vec_p.x;
-        float py = vec_p.y;
-        float pz = vec_p.z;
 
-        float ro = length(vec_p);
-        float theta = atan(py, px);
-        float phi = asin(py/ro);
-
-        U = (theta + M_PI)/(2*M_PI);
-        V = (phi + M_PI_2)/M_PI;
-
-        Kd = texture(TextureImage4, vec2(U,V)).rgb;
-        color.rgb = Kd;
-        return;
-    }
-*/
     
     // Espectro da fonte de iluminação
     vec3 I = vec3(1.0,1.0,1.0); // PREENCH AQUI o espectro da fonte de luz
@@ -255,10 +212,16 @@ void main()
     color.a = 1;
 
 
-    if ( object_id == PLANE )
+    if (object_id == DRAGON){
         color.rgb = lambert_diffuse_term + ambient_term + blinn_phong_specular_term;
-    else
+    }
+    else if (object_id == PROJECTILE){
+        //color.rgb = lambert_diffuse_term + ambient_term + phong_specular_term;
+        color = cor_v;
+    }
+    else{
         color.rgb = lambert_diffuse_term + ambient_term + phong_specular_term;
+    }
     //
 
     // Cor final com correção gamma, considerando monitor sRGB.

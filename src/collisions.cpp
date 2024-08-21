@@ -32,12 +32,13 @@ bool collisionAABBsphere(glm::vec3 Min, glm::vec3 Max, glm::vec3 center, float r
     return distance < radius;
 }
 
-// colisão ponto x esfera utilizada entre a câmera e os projéteis dos inimigos
-bool collisionPointSphere(glm::vec3 point, glm::vec3 center, float radius){
-    float distance = glm::distance(point, center);
-    
-    
-    return distance < radius;
+
+
+// colisao ponto x plano utilizada entre os projéteis e a parede no final do jogo e os inimigos
+bool collisionPointPlane(glm::vec3 point, glm::vec3 normal, glm::vec3 pointPlane){
+    glm::vec3 v = point - pointPlane;
+    float distance = glm::dot(v, normal);
+    return distance < 0;
 }
 
 
